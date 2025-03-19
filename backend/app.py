@@ -16,6 +16,8 @@ from sqlalchemy import select
 
 from backend.models.computation import ComputationModel
 from backend.schemas.computation import ComputationDB, ComputationCreate
+from backend.celery_app import app
+from backend.tasks import make_computation
 
 
 
@@ -44,16 +46,17 @@ class ComputationController(Controller):
         return [ComputationDB.from_orm(obj) for obj in computations.scalars().all()]
 
     @post(path="/computations")
-    async def create_author(
+    async def create_computation(
         self,
         computation_repo: ComputationRepository,
         data: ComputationCreate,
-    ) -> ComputationDB:
+    ) -> dict:
         """Create a new computation."""
-        obj = await computation_repo.add(ComputationModel(**data.dict()),)
-        await computation_repo.session.commit()
-        await computation_repo.session.refresh(obj)
-        return ComputationDB.from_orm(obj)
+        # Start the Celery task
+        task = make_computation.delay(data.title, data.operation, data.a, data.b)
+        
+        # Return the task ID to the client
+        return {"task_id": task.id}
 
     @get(path='/computations/{computation_id: int}')
     async def get_computation(
@@ -61,6 +64,14 @@ class ComputationController(Controller):
         ) -> ComputationDB:
         computation = await computation_repo.get(computation_id)
         return ComputationDB.from_orm(computation)
+
+    @get(path='/computations/status/{task_id: str}')
+    async def get_computation_status(
+        self, task_id: str
+        ) -> dict:
+        """Get the status of a computation task."""
+        task = make_computation.AsyncResult(task_id)
+        return {"status": task.status, "result": task.result}
 
 
 session_config = AsyncSessionConfig(expire_on_commit=False)

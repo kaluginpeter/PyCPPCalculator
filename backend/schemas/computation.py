@@ -23,3 +23,5 @@ class ComputationCreate(BaseModel):
     title: str
     operation: Operation
     result: str
+    a: float
+    b: float
