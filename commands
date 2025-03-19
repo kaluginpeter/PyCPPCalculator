@@ -1,4 +1,5 @@
 
 Run from source
 For celery:   celery -A backend.celery_app worker --pool=solo -l info 
-From uvicorn:     uvicorn backend.app:app --reload
+For uvicorn:     uvicorn backend.app:app --reload
+For redis:    redis-server

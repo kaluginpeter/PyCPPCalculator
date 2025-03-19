@@ -17,11 +17,12 @@ class ComputationDB(BaseModel):
     title: str
     operation: Operation
     result: str
+    operand_a: str
+    operand_b: str
 
 
 class ComputationCreate(BaseModel):
     title: str
     operation: Operation
-    result: str
     a: float
     b: float

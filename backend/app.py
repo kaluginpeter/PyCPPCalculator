@@ -25,6 +25,12 @@ from backend.tasks import make_computation
 class ComputationRepository(repository.SQLAlchemyAsyncRepository[ComputationModel]):
     """Computation repository."""
     model_type = ComputationModel
+    async def get_by_task_id(self, task_id: str) -> ComputationModel:
+        """Fetch a computation by its task ID."""
+        result = await self.session.execute(
+            select(ComputationModel).where(ComputationModel.task_id == task_id)
+        )
+        return result.scalars().first()
 
 
 async def provide_computation_repo(db_session: AsyncSession) -> ComputationRepository:
@@ -52,11 +58,17 @@ class ComputationController(Controller):
         data: ComputationCreate,
     ) -> dict:
         """Create a new computation."""
-        # Start the Celery task
         task = make_computation.delay(data.title, data.operation, data.a, data.b)
-        
-        # Return the task ID to the client
-        return {"task_id": task.id}
+        computation = ComputationModel()
+        computation.result = 'Not finished yet!'
+        computation.operation = data.operation
+        computation.title = data.title
+        computation.task_id = task.id
+        computation.operand_a = data.a
+        computation.operand_b = data.b
+        await computation_repo.add(computation)
+        await computation_repo.session.commit()
+        return {"task_id": task.id} 
 
     @get(path='/computations/{computation_id: int}')
     async def get_computation(
@@ -67,11 +79,29 @@ class ComputationController(Controller):
 
     @get(path='/computations/status/{task_id: str}')
     async def get_computation_status(
-        self, task_id: str
-        ) -> dict:
+        self, 
+        task_id: str, 
+        computation_repo: ComputationRepository
+    ) -> dict:
         """Get the status of a computation task."""
         task = make_computation.AsyncResult(task_id)
-        return {"status": task.status, "result": task.result}
+        
+        if task.successful():
+            computation = await computation_repo.get_by_task_id(task_id)
+            computation.result = task.result
+            await computation_repo.add(computation)
+            await computation_repo.session.commit()
+            await computation_repo.session.refresh(computation)
+            
+            if computation:
+                return {
+                    "status": task.status,
+                    "result": ComputationDB.from_orm(computation).dict()
+                }
+            else:
+                return {"status": task.status, "error": "Computation not found in database"}
+        else:
+            return {"status": task.status, "error": str(task.result)}
 
 
 session_config = AsyncSessionConfig(expire_on_commit=False)
