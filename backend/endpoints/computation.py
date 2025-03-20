@@ -1,5 +1,7 @@
 from litestar import Controller, get, post
+from litestar.exceptions import ValidationException
 from litestar.di import Provide
+from sqlalchemy import select
 
 from backend.schemas.computation import ComputationDB, ComputationCreate
 from backend.models.computation import ComputationModel
@@ -29,14 +31,14 @@ class ComputationController(Controller):
         data: ComputationCreate,
     ) -> dict:
         """Create a new computation."""
-        task = make_computation.delay(data.title, data.operation, data.a, data.b)
+        task = make_computation.delay(data.title, data.operation, data.operand_a, data.operand_b)
         computation = ComputationModel()
         computation.result = 'Not finished yet!'
         computation.operation = data.operation
         computation.title = data.title
         computation.task_id = task.id
-        computation.operand_a = data.a
-        computation.operand_b = data.b
+        computation.operand_a = data.operand_a
+        computation.operand_b = data.operand_b
         await computation_repo.add(computation)
         await computation_repo.session.commit()
         return {"task_id": task.id} 
@@ -55,7 +57,13 @@ class ComputationController(Controller):
         computation_repo: ComputationRepository
     ) -> dict:
         """Get the status of a computation task."""
-        task = make_computation.AsyncResult(task_id)
+        task = make_computation.AsyncResult(task_id) 
+        if isinstance(task.result, dict) and task.result.get('Error'):
+            computation = await computation_repo.get_by_task_id(task_id)
+            if computation:
+                await computation_repo.session.delete(computation)
+                await computation_repo.session.commit()
+            raise ValidationException(task.result.get('Error'))
         
         if task.successful():
             computation = await computation_repo.get_by_task_id(task_id)

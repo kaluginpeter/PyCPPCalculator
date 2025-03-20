@@ -13,6 +13,9 @@ class BaseModel(_BaseModel):
 
 
 class ComputationDB(BaseModel):
+    """
+    Represent instance of computation as it represent in database.
+    """
     id: int
     title: str
     operation: Operation
@@ -22,7 +25,10 @@ class ComputationDB(BaseModel):
 
 
 class ComputationCreate(BaseModel):
+    """
+    Uses for creating computation.
+    """
     title: str
     operation: Operation
-    a: float
-    b: float
+    operand_a: float
+    operand_b: float

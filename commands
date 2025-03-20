@@ -3,3 +3,4 @@ Run from source
 For celery:   celery -A backend.celery_app worker --pool=solo -l info 
 For uvicorn:     uvicorn backend.app:app --reload
 For redis:    redis-server
+For c++ file compilation, run from cpp_backend/:   g++ -std=c++11 -I. -o cpp_backend main.cpp -lws2_32 -lpthread

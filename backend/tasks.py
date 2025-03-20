@@ -9,7 +9,7 @@ app.conf.update(
 )
 
 @app.task
-def make_computation(title, operation, a, b):
+def make_computation(title, operation, operand_a, operand_b):
     """
     Celery task to send a computation request to the C++ backend and return the result.
     """
@@ -20,14 +20,16 @@ def make_computation(title, operation, a, b):
     payload = {
         "title": title,
         "operation": operation,
-        "a": a,
-        "b": b
+        "operand_a": operand_a,
+        "operand_b": operand_b
     }
 
     try:
         # Send a POST request to the C++ backend
         response = requests.post(cpp_backend_url, json=payload)
         response.raise_for_status()  # Raise an exception for HTTP errors
+        if response.json().get('error'):
+            return {'Error': response.json().get('error')}
 
         # Parse the JSON response
         result = response.json().get("result")

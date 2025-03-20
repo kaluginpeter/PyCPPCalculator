@@ -10,9 +10,14 @@
 using namespace httplib;
 using json = nlohmann::json;
 
+const std::string ADDITION = "addition";
+const std::string SUBTRACTION = "subtraction";
+const std::string MULTIPLICATION = "multiplication";
+const std::string DIVISION = "division";
+
+
 int main() {
 #ifdef _WIN32
-    // Initialize Winsock
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Winsock initialization failed." << std::endl;
@@ -36,17 +41,33 @@ int main() {
         // Extract data from JSON
         std::string title = request_body.value("title", "");
         std::string operation = request_body.value("operation", "");
-        int a = request_body.value("a", 0);
-        int b = request_body.value("b", 0);
+        double a = request_body.value("operand_a", 0);
+        double b = request_body.value("operand_b", 0);
+        double resultOfComputation;
 
-        // Perform computation (example: addition)
-        int result = a + b;
-
+        // Perform computation
+        if (operation == ADDITION) {
+            resultOfComputation = a + b;
+        } else if (operation == SUBTRACTION) {
+            resultOfComputation = a - b;
+        } else if (operation == MULTIPLICATION) {
+            resultOfComputation = a * b;
+        } else if (operation == DIVISION) {
+            if (b == 0) {
+                json response_body = {
+                    {"error", "Cannot divide by zero!"}
+                };
+                res.set_content(response_body.dump(), "application/json");
+                return;
+            }
+            resultOfComputation = a / b;
+        }
+        
         // Prepare response JSON
         json response_body = {
             {"title", title},
             {"operation", operation},
-            {"result", result}
+            {"result", resultOfComputation}
         };
 
         // Send response
@@ -60,6 +81,5 @@ int main() {
     // Cleanup Winsock
     WSACleanup();
 #endif
-
     return 0;
 }
