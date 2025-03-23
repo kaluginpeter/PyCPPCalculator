@@ -4,6 +4,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy import Column, String, Text, Enum, Integer
 from litestar.plugins.sqlalchemy import base
 
+from backend.core.config import settings
+
 
 class Operation(enum.StrEnum):
     """
@@ -30,7 +32,7 @@ class ComputationModel(base.UUIDBase):
     operand_a: Mapped[str] = Column(String, name='First operand of the expression')
     operand_b: Mapped[str] = Column(String, name='Second operand of the expression')
     result: Mapped[str] = Column(
-        Text, name='Result of computation', default='Not finished yet!'
+        Text, name='Result of computation', default=settings.DEFAULT_COMPUTATION_RESULT
     )
     task_id: Mapped[str] = Column(
         Integer, nullable=False, name='Represent id of background task'

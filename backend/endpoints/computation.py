@@ -8,7 +8,7 @@ from backend.models.computation import ComputationModel
 from backend.repositories.computation import (
     ComputationRepository, provide_computation_repo
 )
-from backend.tasks import make_computation
+from backend.celery.tasks import make_computation
 
 
 class ComputationController(Controller):
@@ -32,13 +32,8 @@ class ComputationController(Controller):
     ) -> dict:
         """Create a new computation."""
         task = make_computation.delay(data.title, data.operation, data.operand_a, data.operand_b)
-        computation = ComputationModel()
-        computation.result = 'Not finished yet!'
-        computation.operation = data.operation
-        computation.title = data.title
+        computation = ComputationModel(**data.dict())
         computation.task_id = task.id
-        computation.operand_a = data.operand_a
-        computation.operand_b = data.operand_b
         await computation_repo.add(computation)
         await computation_repo.session.commit()
         return {"task_id": task.id} 

@@ -1,8 +1,10 @@
 from uuid import UUID
 
 from pydantic import BaseModel as _BaseModel
+from pydantic import Field
 
 from backend.models.computation import Operation
+from backend.core.config import settings
 
 
 class BaseModel(_BaseModel):
